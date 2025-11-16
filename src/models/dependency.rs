@@ -26,3 +26,9 @@ pub enum DependencyKind {
 pub struct VersionConstraint {
     pub requirement: VersionReq,
 }
+
+impl Dependency {
+    pub fn matches_version(&self, version: &semver::Version) -> bool {
+        self.constraint.requirement.matches(version)
+    }
+}
