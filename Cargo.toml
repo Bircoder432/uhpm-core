@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 semver = { version = "1.0.27", features = ["serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
