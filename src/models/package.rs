@@ -1,15 +1,20 @@
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, str};
+use std::path::PathBuf;
+
+use crate::Dependency;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct Package {
-    name: String,
-    version: Version,
-    author: String,
-    source: PackageSource,
-    target: Target,
-    checksum: Option<Checksum>,
+    pub name: String,
+    pub version: Version,
+    pub author: String,
+    pub source: PackageSource,
+    pub target: Target,
+    pub checksum: Option<Checksum>,
+
+    #[serde(default)]
+    pub dependencies: Vec<Dependency>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
