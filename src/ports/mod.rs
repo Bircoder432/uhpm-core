@@ -9,7 +9,6 @@
 //pub use package_manager::PackageManager;
 //pub use package_repository::PackageRepository;
 
-// Группировка портов по ответственности
 pub mod cache_manager;
 pub mod dependency_resolver;
 pub mod event_publisher;

@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use crate::Dependency;
 use crate::Target;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq)]
 pub struct Package {
     id: PackageId,
     name: String,
@@ -104,7 +104,7 @@ impl PartialEq for Package {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum PackageSource {
     Git {
         url: String,
@@ -131,7 +131,7 @@ impl PackageId {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Checksum {
     pub algorithm: String,
     pub hash: String,
