@@ -1,5 +1,7 @@
 use crate::UhpmError;
 use async_trait::async_trait;
+use reqwest::Response;
+use url::Url;
 
 #[async_trait]
 pub trait NetworkOperations: Send + Sync {
@@ -11,7 +13,7 @@ pub trait NetworkOperations: Send + Sync {
         on_progress: Option<Box<dyn Fn(u64, u64) + Send + Sync>>,
     ) -> Result<Vec<u8>, UhpmError>;
 
-    async fn head(&self, url: &str) -> Result<reqwest::Response, UhpmError>;
+    async fn head(&self, url: &str) -> Result<Response, UhpmError>;
 
     async fn is_url_available(&self, url: &str) -> bool;
 
@@ -22,5 +24,5 @@ pub trait NetworkOperations: Send + Sync {
         on_progress: Option<Box<dyn Fn(u64, u64) + Send + Sync>>,
     ) -> Result<Vec<u8>, UhpmError>;
 
-    fn parse_url(&self, url: &str) -> Result<url::Url, UhpmError>;
+    fn parse_url(&self, url: &str) -> Result<Url, UhpmError>;
 }
