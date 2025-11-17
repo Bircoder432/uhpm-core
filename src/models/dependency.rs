@@ -1,3 +1,4 @@
+use crate::{Package, PackageReference};
 use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
@@ -26,6 +27,28 @@ pub enum DependencyKind {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VersionConstraint {
     pub requirement: VersionReq,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolutionResult {
+    pub packages_to_install: Vec<Package>,
+
+    pub packages_to_update: Vec<PackageReference>,
+
+    pub packages_to_remove: Vec<PackageReference>,
+
+    pub conflicts: Vec<DependencyConflict>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DependencyConflict {
+    pub package: String,
+
+    pub required: String,
+
+    pub installed: String,
+
+    pub message: String,
 }
 
 impl Dependency {
