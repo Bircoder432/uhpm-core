@@ -1,10 +1,6 @@
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use crate::{
-    FileMetadata, Installation, Package, PackageId, Symlink, SymlinkType, UhpmError,
-    ports::FileSystemOperations,
-};
+use crate::{PackageId, Symlink, SymlinkType, UhpmError, ports::FileSystemOperations};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

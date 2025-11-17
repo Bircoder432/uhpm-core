@@ -1,8 +1,6 @@
-use crate::{FileMetadata, Installation, Package, PackageId, PackageReference, UhpmError};
-use rusqlite::{Connection, OptionalExtension, params};
-use semver::Version;
+use crate::{FileMetadata, Installation, Package, PackageId, UhpmError};
+use rusqlite::Connection;
 use std::path::PathBuf;
-use uuid::Uuid;
 
 pub struct DatabaseRepository {
     connection: Connection,

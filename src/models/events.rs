@@ -15,11 +15,11 @@ pub enum PackageEvent {
         error: String,
     },
 
-    UninstallationStarted {
+    RemoveStarted {
         package_ref: PackageReference,
     },
 
-    UninstallationCompleted {
+    RemoveCompleted {
         package_ref: PackageReference,
     },
 
