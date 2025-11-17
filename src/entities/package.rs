@@ -1,27 +1,77 @@
+use crate::UhpmError;
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fmt;
 use std::path::PathBuf;
 
 use crate::Dependency;
 use crate::Target;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Package {
-    pub name: String,
-    pub version: Version,
-    pub author: String,
-    pub source: PackageSource,
-    pub target: Target,
-    pub checksum: Option<Checksum>,
-
-    #[serde(default)]
-    pub dependencies: Vec<Dependency>,
+    id: PackageId,
+    name: String,
+    version: Version,
+    author: String,
+    source: PackageSource,
+    target: Target,
+    checksum: Option<Checksum>,
+    dependencies: HashSet<Dependency>,
+    installed: bool,
+    active: bool,
 }
 
 impl Package {
-    pub fn id(&self) -> String {
-        format!("{}@{}", self.name, self.version)
+    pub fn new(
+        name: String,
+        version: semver::Version,
+        author: String,
+        source: PackageSource,
+        target: Target,
+        checksum: Option<Checksum>,
+        dependencies: Vec<Dependency>,
+    ) -> Result<Self, crate::UhpmError> {
+        if name.is_empty() {
+            return Err(UhpmError::ValidationError(
+                "Package name cannot be empty".into(),
+            ));
+        }
+
+        let id = PackageId::new(&name, &version);
+        let dependencies_set: HashSet<Dependency> = dependencies.into_iter().collect();
+
+        Ok(Self {
+            id,
+            name,
+            version,
+            author,
+            source,
+            target,
+            checksum,
+            dependencies: dependencies_set,
+            installed: false,
+            active: false,
+        })
+    }
+
+    pub fn mark_installed(&mut self) {
+        self.installed = true;
+    }
+
+    pub fn mark_removed(&mut self) {
+        self.installed = false;
+        self.active = false;
+    }
+
+    pub fn activate(&mut self) {
+        if self.installed {
+            self.active = true;
+        }
+    }
+
+    pub fn deactivate(&mut self) {
+        self.active = false;
     }
 
     pub fn matches_target(&self, target: &Target) -> bool {
@@ -30,6 +80,27 @@ impl Package {
 
     pub fn has_dependency(&self, name: &str) -> bool {
         self.dependencies.iter().any(|d| d.name == name)
+    }
+    pub fn id(&self) -> &PackageId {
+        &self.id
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn version(&self) -> &semver::Version {
+        &self.version
+    }
+    pub fn is_installed(&self) -> bool {
+        self.installed
+    }
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+}
+
+impl PartialEq for Package {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }
 
@@ -45,6 +116,19 @@ pub enum PackageSource {
     Local {
         path: PathBuf,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PackageId(String);
+
+impl PackageId {
+    pub fn new(name: &str, version: &semver::Version) -> Self {
+        Self(format!("{}@{}", name, version))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
