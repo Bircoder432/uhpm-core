@@ -1,7 +1,9 @@
 pub mod entities;
-mod errors;
-mod models;
-mod ports;
+pub mod errors;
+pub mod models;
+pub mod paths;
+pub mod ports;
+pub mod repositories;
 
 pub use entities::*;
 pub use errors::*;

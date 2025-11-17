@@ -8,10 +8,12 @@ async-trait = "0.1.89"
 chrono = { version = "0.4.42", features = ["serde"] }
 md5 = "0.8.0"
 reqwest = { version = "0.12.24", features = ["json"] }
+rusqlite = { version = "0.37.0", features = ["bundled"] }
 semver = { version = "1.0.27", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 sha1 = "0.10.6"
 sha2 = "0.10.9"
 thiserror = "2.0.17"
+toml = { version = "0.9.8", features = ["parse"] }
 url = "2.5.7"
-uuid = { version = "1.18.1", features = ["v4"] }
+uuid = { version = "1.18.1", features = ["serde", "v4"] }

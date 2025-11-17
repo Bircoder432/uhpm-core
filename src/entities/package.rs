@@ -96,6 +96,9 @@ impl Package {
     pub fn is_active(&self) -> bool {
         self.active
     }
+    pub fn author(&self) -> &String {
+        &self.author
+    }
 }
 
 impl PartialEq for Package {
