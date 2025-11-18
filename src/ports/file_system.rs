@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use std::path::{Path, PathBuf};
 
 #[async_trait]
-pub trait FileSystemOperations: Send + Sync {
+pub trait FileSystemOperations: Send + Sync + Clone {
     async fn read_file(&self, path: &Path) -> Result<Vec<u8>, UhpmError>;
 
     async fn write_file(&self, path: &Path, data: &[u8]) -> Result<(), UhpmError>;

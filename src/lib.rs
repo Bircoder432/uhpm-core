@@ -4,6 +4,7 @@ pub mod models;
 pub mod paths;
 pub mod ports;
 pub mod repositories;
+pub mod services;
 
 pub use entities::*;
 pub use errors::*;

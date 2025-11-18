@@ -3,7 +3,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum UhpmError {
-    // Domain Errors
     #[error("Package `{0}` not found")]
     PackageNotFound(String),
 
@@ -34,7 +33,6 @@ pub enum UhpmError {
     #[error("Package is currently active and cannot be removed")]
     PackageIsActive,
 
-    // Validation Errors
     #[error("Validation error: {0}")]
     ValidationError(String),
 
@@ -47,7 +45,6 @@ pub enum UhpmError {
     #[error("Unsupported target platform: {0}")]
     UnsupportedTarget(String),
 
-    // Installation Errors
     #[error("Installation failed: {0}")]
     InstallationError(String),
 
@@ -60,7 +57,6 @@ pub enum UhpmError {
     #[error("Version switch failed: {0}")]
     SwitchError(String),
 
-    // Network Errors
     #[error("Network error: {0}")]
     NetworkError(String),
 
@@ -70,7 +66,6 @@ pub enum UhpmError {
     #[error("Repository index corrupted: {0}")]
     RepositoryCorrupted(String),
 
-    // Storage Errors
     #[error("Database error: {0}")]
     DatabaseError(String),
 
@@ -80,14 +75,12 @@ pub enum UhpmError {
     #[error("Cache error: {0}")]
     CacheError(String),
 
-    // Configuration Errors
     #[error("Configuration error: {0}")]
     ConfigError(String),
 
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
 
-    // File System Errors
     #[error("Failed to read file: {0}")]
     IoError(#[from] std::io::Error),
 
@@ -97,16 +90,17 @@ pub enum UhpmError {
     #[error("Insufficient permissions: {0}")]
     PermissionError(String),
 
-    // Serialization Errors
     #[error("Serialization error: {0}")]
     SerializationError(String),
 
     #[error("Deserialization error: {0}")]
     DeserializationError(String),
 
-    // External Errors
     #[error("External tool error: {0}")]
     ExternalToolError(String),
+
+    #[error("Database operation failed: {0}")]
+    RusqliteError(#[from] rusqlite::Error),
 }
 
 impl UhpmError {

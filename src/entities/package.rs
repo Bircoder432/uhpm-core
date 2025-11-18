@@ -99,6 +99,18 @@ impl Package {
     pub fn author(&self) -> &String {
         &self.author
     }
+    pub fn source(&self) -> &PackageSource {
+        &self.source
+    }
+    pub fn target(&self) -> &Target {
+        &self.target
+    }
+    pub fn checksum(&self) -> &Option<Checksum> {
+        &self.checksum
+    }
+    pub fn dependencies(&self) -> &HashSet<Dependency> {
+        &self.dependencies
+    }
 }
 
 impl PartialEq for Package {

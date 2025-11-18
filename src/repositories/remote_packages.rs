@@ -1,10 +1,12 @@
 use crate::{
-    Dependency, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
+    Dependency, DependencyKind, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
+    VersionConstraint,
     paths::UhpmPaths,
     ports::{CacheManager, FileSystemOperations, NetworkOperations, PackageRepository},
 };
 use async_trait::async_trait;
-use semver::Version;
+use semver::{Version, VersionReq};
+use serde::Deserialize;
 
 pub struct RemotePackagesRepository<NET, CACHE, FS, P>
 where
@@ -19,6 +21,21 @@ where
     paths: P,
     repository: Repository,
     base_url: String,
+}
+
+#[derive(Deserialize)]
+struct RemotePackageMeta {
+    pub name: String,
+    pub version: String,
+    pub author: String,
+    pub description: Option<String>,
+    pub dependencies: Vec<String>,
+    pub provides: Option<Vec<String>>,
+    pub conflicts: Option<Vec<String>>,
+    pub checksum_algorithm: Option<String>,
+    pub checksum_hash: Option<String>,
+    pub target_os: Option<String>,
+    pub target_arch: Option<String>,
 }
 
 impl<NET, CACHE, FS, P> RemotePackagesRepository<NET, CACHE, FS, P>
@@ -75,6 +92,57 @@ where
     fn get_index_url(&self) -> String {
         format!("{}/index.toml", self.base_url.trim_end_matches('/'))
     }
+
+    fn parse_dependency(&self, dep_str: &str) -> Result<Dependency, UhpmError> {
+        let parts: Vec<&str> = dep_str.splitn(2, '@').collect();
+        let name = parts[0].trim().to_string();
+
+        let constraint = if parts.len() == 2 {
+            VersionConstraint {
+                requirement: VersionReq::parse(parts[1]).map_err(|e| {
+                    UhpmError::ValidationError(format!(
+                        "Invalid version constraint '{}': {}",
+                        parts[1], e
+                    ))
+                })?,
+            }
+        } else {
+            VersionConstraint {
+                requirement: VersionReq::parse("*")
+                    .map_err(|e| UhpmError::ValidationError(e.to_string()))?,
+            }
+        };
+
+        Ok(Dependency {
+            name,
+            constraint,
+            kind: DependencyKind::Required,
+            provides: None,
+            features: Vec::new(),
+        })
+    }
+
+    async fn load_remote_meta(
+        &self,
+        package_ref: &PackageReference,
+    ) -> Result<RemotePackageMeta, UhpmError> {
+        let meta_url = self.get_package_meta_url(package_ref);
+        let meta_data = if let Some(cached) = self.cache.get_index(&meta_url).await? {
+            cached
+        } else {
+            let data = self.network.get(&meta_url).await?;
+            self.cache.put_index(&meta_url, &data).await?;
+            data
+        };
+
+        let meta_str = std::str::from_utf8(&meta_data)
+            .map_err(|e| UhpmError::DeserializationError(e.to_string()))?;
+
+        let remote_meta: RemotePackageMeta =
+            toml::from_str(meta_str).map_err(|e| UhpmError::DeserializationError(e.to_string()))?;
+
+        Ok(remote_meta)
+    }
 }
 
 #[async_trait]
@@ -86,8 +154,32 @@ where
     P: UhpmPaths + Send + Sync,
 {
     async fn get_package(&self, package_ref: &PackageReference) -> Result<Package, UhpmError> {
-        // TODO
-        Err(UhpmError::ValidationError("Not implemented".into()))
+        let remote_meta = self.load_remote_meta(package_ref).await?;
+
+        let dependencies: Vec<Dependency> = remote_meta
+            .dependencies
+            .into_iter()
+            .map(|dep_str| self.parse_dependency(&dep_str))
+            .collect::<Result<Vec<_>, UhpmError>>()?;
+
+        let package = Package::new(
+            remote_meta.name,
+            package_ref.version.clone(),
+            remote_meta.author,
+            crate::PackageSource::Http {
+                url: self.get_package_download_url(package_ref),
+            },
+            crate::Target::current(),
+            Some(crate::Checksum {
+                algorithm: remote_meta
+                    .checksum_algorithm
+                    .unwrap_or_else(|| "sha256".to_string()),
+                hash: remote_meta.checksum_hash.unwrap_or_default(),
+            }),
+            dependencies,
+        )?;
+
+        Ok(package)
     }
 
     async fn search_packages(&self, query: &str) -> Result<Vec<Package>, UhpmError> {
@@ -144,6 +236,11 @@ where
                 let package_ref = PackageReference::new(dependency.name.clone(), version);
                 let package = self.get_package(&package_ref).await?;
                 resolved_packages.push(package);
+            } else {
+                return Err(UhpmError::ResolutionError(format!(
+                    "Cannot resolve dependency: {} {}",
+                    dependency.name, dependency.constraint.requirement
+                )));
             }
         }
 

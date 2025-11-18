@@ -1,12 +1,15 @@
+// В файле ./repositories/local_packages.rs
 use crate::{
-    Dependency, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
+    Dependency, DependencyKind, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
+    VersionConstraint,
     paths::UhpmPaths,
     ports::{FileSystemOperations, PackageRepository},
 };
 use async_trait::async_trait;
-use semver::Version;
+use semver::{Version, VersionReq};
 use std::path::PathBuf;
 
+#[derive(Clone)]
 pub struct LocalPackagesRepository<FS, P>
 where
     FS: FileSystemOperations,
@@ -37,6 +40,76 @@ where
             .join(&package_ref.version.to_string())
             .join("meta.toml")
     }
+
+    fn parse_dependency(&self, dep_str: &str) -> Result<Dependency, UhpmError> {
+        if let Some((name, version)) = dep_str.split_once('@') {
+            let constraint = VersionConstraint {
+                requirement: VersionReq::parse(version).map_err(|e| {
+                    UhpmError::ValidationError(format!(
+                        "Invalid version constraint '{}': {}",
+                        version, e
+                    ))
+                })?,
+            };
+
+            Ok(Dependency {
+                name: name.trim().to_string(),
+                constraint,
+                kind: DependencyKind::Required,
+                provides: None,
+                features: Vec::new(),
+            })
+        } else {
+            let constraint = VersionConstraint {
+                requirement: VersionReq::parse("*")
+                    .map_err(|e| UhpmError::ValidationError(e.to_string()))?,
+            };
+
+            Ok(Dependency {
+                name: dep_str.trim().to_string(),
+                constraint,
+                kind: DependencyKind::Required,
+                provides: None,
+                features: Vec::new(),
+            })
+        }
+    }
+
+    async fn add_directory_to_tar(
+        &self,
+        tar: &mut tar::Builder<flate2::write::GzEncoder<&mut Vec<u8>>>,
+        base_path: &PathBuf,
+        current_path: &PathBuf,
+    ) -> Result<(), UhpmError> {
+        if let Ok(entries) = self.file_system.read_dir(current_path).await {
+            for entry in entries {
+                let metadata = self.file_system.metadata(&entry).await?;
+
+                if metadata.is_directory() {
+                    let future = Box::pin(self.add_directory_to_tar(tar, base_path, &entry));
+                    future.await?;
+                } else {
+                    let relative_path = entry
+                        .strip_prefix(base_path)
+                        .map_err(|e| UhpmError::FileSystemError(e.to_string()))?;
+
+                    let content = self.file_system.read_file(&entry).await?;
+
+                    let mut header = tar::Header::new_gnu();
+                    header
+                        .set_path(relative_path)
+                        .map_err(|e| UhpmError::SerializationError(e.to_string()))?;
+                    header.set_size(content.len() as u64);
+                    header.set_cksum();
+
+                    tar.append(&header, &content[..])
+                        .map_err(|e| UhpmError::SerializationError(e.to_string()))?;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -52,8 +125,36 @@ where
             return Err(UhpmError::PackageNotFound(package_ref.to_string()));
         }
 
-        // TODO
-        Err(UhpmError::ValidationError("Not implemented".into()))
+        let data = self.file_system.read_file(&meta_path).await?;
+        let meta_str = std::str::from_utf8(&data)
+            .map_err(|e| UhpmError::DeserializationError(e.to_string()))?;
+
+        let meta: crate::repositories::package_files::PackageMeta =
+            toml::from_str(meta_str).map_err(|e| UhpmError::DeserializationError(e.to_string()))?;
+
+        let dependencies: Vec<Dependency> = meta
+            .dependencies
+            .into_iter()
+            .map(|dep_str| self.parse_dependency(&dep_str))
+            .collect::<Result<Vec<_>, UhpmError>>()?;
+
+        let package = Package::new(
+            meta.name,
+            package_ref.version.clone(),
+            meta.author,
+            crate::PackageSource::Local {
+                path: self
+                    .paths
+                    .packages_dir()
+                    .join(&package_ref.name)
+                    .join(&package_ref.version.to_string()),
+            },
+            crate::Target::current(),
+            None,
+            dependencies,
+        )?;
+
+        Ok(package)
     }
 
     async fn search_packages(&self, query: &str) -> Result<Vec<Package>, UhpmError> {
@@ -61,7 +162,26 @@ where
         let mut results = Vec::new();
 
         if self.file_system.exists(&packages_dir).await {
-            // TODO
+            if let Ok(entries) = self.file_system.read_dir(&packages_dir).await {
+                for package_dir in entries {
+                    if let Some(package_name) = package_dir.file_name().and_then(|n| n.to_str()) {
+                        if package_name.contains(query) {
+                            let versions = self.get_package_versions(package_name).await?;
+
+                            for version_str in versions {
+                                if let Ok(version) = Version::parse(&version_str) {
+                                    let package_ref =
+                                        PackageReference::new(package_name.to_string(), version);
+                                    match self.get_package(&package_ref).await {
+                                        Ok(package) => results.push(package),
+                                        Err(_) => continue,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Ok(results)
@@ -117,6 +237,11 @@ where
                 let package_ref = PackageReference::new(dependency.name.clone(), version);
                 let package = self.get_package(&package_ref).await?;
                 resolved_packages.push(package);
+            } else {
+                return Err(UhpmError::ResolutionError(format!(
+                    "Cannot resolve dependency: {} {}",
+                    dependency.name, dependency.constraint.requirement
+                )));
             }
         }
 
@@ -129,8 +254,21 @@ where
             return Err(UhpmError::PackageNotFound(package_ref.to_string()));
         }
 
-        // TODO
-        Ok(Vec::new())
+        // Создаем новый PackageFilesRepository вместо использования self.file_system
+        let package_files_repo = crate::repositories::package_files::PackageFilesRepository::new(
+            // Клонируем file_system, если это возможно, или создаем новый экземпляр
+            // В реальном коде здесь нужно обеспечить клонирование или создание нового экземпляра
+            // Для простоты предположим, что FS реализует Clone
+            self.file_system.clone(),
+            self.paths.packages_dir(),
+        );
+
+        package_files_repo
+            .create_package_archive(&crate::PackageId::new(
+                &package_ref.name,
+                &package_ref.version,
+            ))
+            .await
     }
 
     async fn get_index(&self) -> Result<RepositoryIndex, UhpmError> {

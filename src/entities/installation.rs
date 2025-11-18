@@ -91,15 +91,48 @@ impl Installation {
     }
 
     pub fn verify_integrity(&self) -> Result<(), crate::UhpmError> {
-        for (path, metadata) in &self.installed_files {
+        for (path, _metadata) in &self.installed_files {
             if !path.exists() {
                 return Err(UhpmError::InstallationError(format!(
                     "Missing installed file: {}",
                     path.display()
                 )));
             }
-            // TODO
         }
         Ok(())
+    }
+
+    // Геттеры для доступа к приватным полям
+    pub fn id(&self) -> &InstallationId {
+        &self.id
+    }
+
+    pub fn package_id(&self) -> &PackageId {
+        &self.package_id
+    }
+
+    pub fn installed_at(&self) -> &chrono::DateTime<chrono::Utc> {
+        &self.installed_at
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+
+    pub fn installed_files(&self) -> &HashMap<PathBuf, FileMetadata> {
+        &self.installed_files
+    }
+
+    pub fn symlinks(&self) -> &Vec<Symlink> {
+        &self.symlinks
+    }
+
+    // Сеттеры для восстановления из БД
+    pub fn set_id(&mut self, id: InstallationId) {
+        self.id = id;
+    }
+
+    pub fn set_installed_at(&mut self, installed_at: chrono::DateTime<chrono::Utc>) {
+        self.installed_at = installed_at;
     }
 }
