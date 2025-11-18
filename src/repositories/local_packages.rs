@@ -1,4 +1,3 @@
-// В файле ./repositories/local_packages.rs
 use crate::{
     Dependency, DependencyKind, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
     VersionConstraint,
@@ -254,11 +253,7 @@ where
             return Err(UhpmError::PackageNotFound(package_ref.to_string()));
         }
 
-        // Создаем новый PackageFilesRepository вместо использования self.file_system
         let package_files_repo = crate::repositories::package_files::PackageFilesRepository::new(
-            // Клонируем file_system, если это возможно, или создаем новый экземпляр
-            // В реальном коде здесь нужно обеспечить клонирование или создание нового экземпляра
-            // Для простоты предположим, что FS реализует Clone
             self.file_system.clone(),
             self.paths.packages_dir(),
         );
