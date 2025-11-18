@@ -56,7 +56,7 @@ where
 
     fn get_package_meta_url(&self, package_ref: &PackageReference) -> String {
         format!(
-            "{}/packages/{}/{}/meta.toml",
+            "{}/packages/{}-{}-meta.toml",
             self.base_url.trim_end_matches('/'),
             package_ref.name,
             package_ref.version
@@ -65,7 +65,7 @@ where
 
     fn get_package_download_url(&self, package_ref: &PackageReference) -> String {
         format!(
-            "{}/packages/{}/{}/package.tar.gz",
+            "{}/packages/{}-{}.uhp",
             self.base_url.trim_end_matches('/'),
             package_ref.name,
             package_ref.version
