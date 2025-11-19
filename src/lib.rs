@@ -1,5 +1,6 @@
 pub mod entities;
 pub mod errors;
+pub mod factories;
 pub mod models;
 pub mod paths;
 pub mod ports;

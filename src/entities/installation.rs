@@ -1,7 +1,7 @@
 use crate::{FileMetadata, PackageId, Symlink, UhpmError};
 use std::collections::HashMap;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -63,14 +63,21 @@ pub struct Installation {
 }
 
 impl Installation {
-    pub fn new(package_id: PackageId) -> Self {
+    pub fn new(
+        id: InstallationId,
+        package_id: PackageId,
+        installed_files: HashMap<PathBuf, FileMetadata>,
+        symlinks: Vec<Symlink>,
+        installed_at: chrono::DateTime<chrono::Utc>,
+        active: bool,
+    ) -> Self {
         Self {
-            id: InstallationId::new(),
-            package_id,
-            installed_files: HashMap::new(),
-            symlinks: Vec::new(),
-            installed_at: chrono::Utc::now(),
-            active: false,
+            id: id,
+            package_id: package_id,
+            installed_files: installed_files,
+            symlinks: symlinks,
+            installed_at: installed_at,
+            active: active,
         }
     }
 
@@ -102,7 +109,6 @@ impl Installation {
         Ok(())
     }
 
-    // Геттеры для доступа к приватным полям
     pub fn id(&self) -> &InstallationId {
         &self.id
     }
@@ -127,7 +133,6 @@ impl Installation {
         &self.symlinks
     }
 
-    // Сеттеры для восстановления из БД
     pub fn set_id(&mut self, id: InstallationId) {
         self.id = id;
     }

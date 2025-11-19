@@ -1,13 +1,14 @@
-use crate::UhpmError;
+use crate::{Dependency, Target};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 use std::path::PathBuf;
 
-use crate::Dependency;
-use crate::Target;
-
+/// Package entity representing a software package.
+///
+/// This is a pure data structure with no business logic.
+/// All validation and business rules are handled by factories and services.
 #[derive(Debug, Clone, Eq)]
 pub struct Package {
     id: PackageId,
@@ -24,92 +25,89 @@ pub struct Package {
 
 impl Package {
     pub fn new(
+        id: PackageId,
         name: String,
-        version: semver::Version,
+        version: Version,
         author: String,
         source: PackageSource,
         target: Target,
         checksum: Option<Checksum>,
-        dependencies: Vec<Dependency>,
-    ) -> Result<Self, crate::UhpmError> {
-        if name.is_empty() {
-            return Err(UhpmError::ValidationError(
-                "Package name cannot be empty".into(),
-            ));
-        }
-
-        let id = PackageId::new(&name, &version);
-        let dependencies_set: HashSet<Dependency> = dependencies.into_iter().collect();
-
-        Ok(Self {
-            id,
-            name,
-            version,
-            author,
-            source,
-            target,
-            checksum,
-            dependencies: dependencies_set,
-            installed: false,
-            active: false,
-        })
-    }
-
-    pub fn mark_installed(&mut self) {
-        self.installed = true;
-    }
-
-    pub fn mark_removed(&mut self) {
-        self.installed = false;
-        self.active = false;
-    }
-
-    pub fn activate(&mut self) {
-        if self.installed {
-            self.active = true;
+        dependencies: HashSet<Dependency>,
+        installed: bool,
+        active: bool,
+    ) -> Self {
+        Self {
+            id: id,
+            name: name,
+            version: version,
+            author: author,
+            source: source,
+            target: target,
+            checksum: checksum,
+            dependencies: dependencies,
+            installed: installed,
+            active: active,
         }
     }
 
-    pub fn deactivate(&mut self) {
-        self.active = false;
-    }
-
-    pub fn matches_target(&self, target: &Target) -> bool {
-        self.target.matches(target)
-    }
-
-    pub fn has_dependency(&self, name: &str) -> bool {
-        self.dependencies.iter().any(|d| d.name == name)
-    }
+    /// Returns package ID.
     pub fn id(&self) -> &PackageId {
         &self.id
     }
+
+    /// Returns package name.
     pub fn name(&self) -> &str {
         &self.name
     }
-    pub fn version(&self) -> &semver::Version {
+
+    /// Returns package version.
+    pub fn version(&self) -> &Version {
         &self.version
     }
-    pub fn is_installed(&self) -> bool {
-        self.installed
-    }
-    pub fn is_active(&self) -> bool {
-        self.active
-    }
-    pub fn author(&self) -> &String {
+
+    /// Returns package author.
+    pub fn author(&self) -> &str {
         &self.author
     }
+
+    /// Returns package source.
     pub fn source(&self) -> &PackageSource {
         &self.source
     }
+
+    /// Returns target platform.
     pub fn target(&self) -> &Target {
         &self.target
     }
+
+    /// Returns package checksum.
     pub fn checksum(&self) -> &Option<Checksum> {
         &self.checksum
     }
+
+    /// Returns package dependencies.
     pub fn dependencies(&self) -> &HashSet<Dependency> {
         &self.dependencies
+    }
+
+    /// Checks if package is installed.
+    pub fn is_installed(&self) -> bool {
+        self.installed
+    }
+
+    /// Checks if package is active.
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+
+    /// Sets installed status.
+    pub fn set_installed(&mut self, installed: bool) {
+        self.installed = installed;
+    }
+
+    /// Sets active status.
+    pub fn set_active(&mut self, active: bool) {
+        self.active = active;
     }
 }
 

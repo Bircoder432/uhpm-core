@@ -1,4 +1,3 @@
-pub mod database;
 pub mod local_packages;
 pub mod package_files;
 pub mod remote_packages;

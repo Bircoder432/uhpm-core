@@ -1,6 +1,7 @@
 use crate::{
     Dependency, DependencyKind, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
     VersionConstraint,
+    factories::PackageFactory,
     paths::UhpmPaths,
     ports::{FileSystemOperations, PackageRepository},
 };
@@ -137,7 +138,7 @@ where
             .map(|dep_str| self.parse_dependency(&dep_str))
             .collect::<Result<Vec<_>, UhpmError>>()?;
 
-        let package = Package::new(
+        let package = PackageFactory::create(
             meta.name,
             package_ref.version.clone(),
             meta.author,
