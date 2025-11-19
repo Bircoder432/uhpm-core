@@ -20,12 +20,7 @@ impl InstallationFactory {
     /// # Returns
     /// * `Installation` - New installation instance
     ///
-    /// # Examples
-    /// ```
-    /// let factory = InstallationFactory;
-    /// let installation = factory.create(package_id);
-    /// ```
-    pub fn create(&self, package_id: PackageId) -> Installation {
+    pub fn create(package_id: PackageId) -> Installation {
         Installation::new(
             InstallationId::new(),
             package_id,
@@ -47,7 +42,6 @@ impl InstallationFactory {
     /// # Returns
     /// * `Installation` - Reconstructed installation
     pub fn from_existing(
-        &self,
         installation_id: InstallationId,
         package_id: PackageId,
         installed_at: chrono::DateTime<chrono::Utc>,
@@ -73,7 +67,7 @@ impl InstallationFactory {
     /// # Returns
     /// * `Ok(())` - Installation can be activated
     /// * `Err(UhpmError)` - Installation cannot be activated
-    pub fn validate_activation(&self, installation: &Installation) -> Result<(), UhpmError> {
+    pub fn validate_activation(installation: &Installation) -> Result<(), UhpmError> {
         if installation.installed_files().is_empty() {
             return Err(UhpmError::ValidationError(
                 "Cannot activate installation with no files".to_string(),
@@ -187,9 +181,8 @@ mod tests {
 
     #[test]
     fn test_create_installation() {
-        let factory = InstallationFactory;
         let package_id = PackageId::new("test-pkg", &Version::parse("1.0.0").unwrap());
-        let installation = factory.create(package_id);
+        let installation = InstallationFactory::create(package_id);
 
         assert!(!installation.is_active());
         assert!(installation.installed_files().is_empty());
@@ -198,11 +191,10 @@ mod tests {
 
     #[test]
     fn test_validate_activation_empty_installation() {
-        let factory = InstallationFactory;
         let package_id = PackageId::new("test-pkg", &Version::parse("1.0.0").unwrap());
-        let installation = factory.create(package_id);
+        let installation = InstallationFactory::create(package_id);
 
-        let result = factory.validate_activation(&installation);
+        let result = InstallationFactory::validate_activation(&installation);
         assert!(result.is_err());
     }
 }

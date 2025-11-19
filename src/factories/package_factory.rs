@@ -28,8 +28,10 @@ impl PackageFactory {
     ///
     /// # Examples
     /// ```
-    /// let factory = PackageFactory;
-    /// let package = factory.create(
+    /// use semver::Version;
+    /// use uhpm_core::{Target, PackageSource, factories::PackageFactory};
+    ///
+    /// let package = PackageFactory::create(
     ///     "my-package".to_string(),
     ///     Version::parse("1.0.0").unwrap(),
     ///     "author".to_string(),
@@ -37,10 +39,9 @@ impl PackageFactory {
     ///     Target::current(),
     ///     None,
     ///     vec![]
-    /// ).await?;
+    /// );
     /// ```
     pub fn create(
-        &self,
         name: String,
         version: Version,
         author: String,
@@ -103,7 +104,6 @@ impl PackageFactory {
 
     /// Creates a package from remote metadata (for downloaded packages)
     pub fn from_remote_metadata(
-        &self,
         name: String,
         version: Version,
         author: String,
@@ -112,7 +112,7 @@ impl PackageFactory {
         checksum: Option<Checksum>,
         dependencies: Vec<Dependency>,
     ) -> Result<Package, UhpmError> {
-        let mut package = self.create(
+        let mut package = Self::create(
             name,
             version,
             author,
@@ -134,7 +134,6 @@ impl PackageFactory {
 
     /// Creates a package from local files (for existing installations)
     pub fn from_local_files(
-        &self,
         name: String,
         version: Version,
         author: String,
@@ -142,7 +141,7 @@ impl PackageFactory {
         target: Target,
         dependencies: Vec<Dependency>,
     ) -> Result<Package, UhpmError> {
-        self.create(name, version, author, source, target, None, dependencies)
+        Self::create(name, version, author, source, target, None, dependencies)
     }
 
     /// Validates package name format
@@ -208,20 +207,18 @@ mod tests {
 
     #[test]
     fn test_create_valid_package() {
-        let factory = PackageFactory;
-        let package = factory
-            .create(
-                "my-package".to_string(),
-                Version::parse("1.0.0").unwrap(),
-                "John Doe".to_string(),
-                PackageSource::Local {
-                    path: "/tmp".into(),
-                },
-                Target::current(),
-                None,
-                vec![],
-            )
-            .unwrap();
+        let package = PackageFactory::create(
+            "my-package".to_string(),
+            Version::parse("1.0.0").unwrap(),
+            "John Doe".to_string(),
+            PackageSource::Local {
+                path: "/tmp".into(),
+            },
+            Target::current(),
+            None,
+            vec![],
+        )
+        .unwrap();
 
         assert_eq!(package.name(), "my-package");
         assert!(!package.is_installed());
@@ -230,9 +227,8 @@ mod tests {
 
     #[test]
     fn test_invalid_package_name() {
-        let factory = PackageFactory;
-        let result = factory.create(
-            "".to_string(), // Empty name
+        let result = PackageFactory::create(
+            "".to_string(),
             Version::parse("1.0.0").unwrap(),
             "John Doe".to_string(),
             PackageSource::Local {
