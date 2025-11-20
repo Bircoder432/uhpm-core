@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{Dependency, Package, PackageReference, Repository, RepositoryIndex, UhpmError};
 use async_trait::async_trait;
 
@@ -13,7 +15,7 @@ pub trait PackageRepository: Send + Sync {
 
     async fn resolve_dependencies(
         &self,
-        dependencies: &[Dependency],
+        dependencies: HashSet<Dependency>,
     ) -> Result<Vec<Package>, UhpmError>;
 
     async fn download_package(&self, package_ref: &PackageReference) -> Result<Vec<u8>, UhpmError>;
