@@ -7,7 +7,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use semver::{Version, VersionReq};
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
 #[derive(Clone)]
 pub struct LocalPackagesRepository<FS, P>
@@ -219,7 +219,7 @@ where
 
     async fn resolve_dependencies(
         &self,
-        dependencies: &[Dependency],
+        dependencies: &HashSet<Dependency>,
     ) -> Result<Vec<Package>, UhpmError> {
         let mut resolved_packages = Vec::new();
 

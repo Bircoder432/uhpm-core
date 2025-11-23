@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     Dependency, DependencyKind, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
     VersionConstraint,
@@ -224,7 +226,7 @@ where
 
     async fn resolve_dependencies(
         &self,
-        dependencies: &[Dependency],
+        dependencies: &HashSet<Dependency>,
     ) -> Result<Vec<Package>, UhpmError> {
         let mut resolved_packages = Vec::new();
         let index = self.get_index().await?;

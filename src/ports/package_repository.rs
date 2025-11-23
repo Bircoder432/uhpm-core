@@ -15,7 +15,7 @@ pub trait PackageRepository: Send + Sync {
 
     async fn resolve_dependencies(
         &self,
-        dependencies: HashSet<Dependency>,
+        dependencies: &HashSet<Dependency>,
     ) -> Result<Vec<Package>, UhpmError>;
 
     async fn download_package(&self, package_ref: &PackageReference) -> Result<Vec<u8>, UhpmError>;
