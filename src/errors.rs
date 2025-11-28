@@ -85,7 +85,7 @@ pub enum UhpmError {
     IoError(#[from] std::io::Error),
 
     #[error("File system error: {0}")]
-    FileSystemError(String),
+    FileSystemError(#[from] crate::models::file_system::FsError),
 
     #[error("Insufficient permissions: {0}")]
     PermissionError(String),

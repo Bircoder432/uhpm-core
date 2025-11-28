@@ -2,7 +2,7 @@ use flate2::{Compression, read::GzDecoder, write::GzEncoder};
 use std::path::PathBuf;
 use tar::{Archive, Builder};
 
-use crate::{PackageId, Symlink, SymlinkType, UhpmError, ports::FileSystemOperations};
+use crate::{FsError, PackageId, Symlink, SymlinkType, UhpmError, ports::FileSystemOperations};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -66,14 +66,14 @@ where
             .write_file(&temp_path, package_data)
             .await?;
 
-        let tar_gz = std::fs::File::open(&temp_path)
-            .map_err(|e| UhpmError::FileSystemError(e.to_string()))?;
+        let tar_gz =
+            std::fs::File::open(&temp_path).map_err(|e| FsError::ExtractionError(e.to_string()))?;
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);
 
         archive
             .unpack(&package_path)
-            .map_err(|e| UhpmError::FileSystemError(format!("Failed to extract package: {}", e)))?;
+            .map_err(|e| FsError::ExtractionError(e.to_string()))?;
 
         self.file_system.remove(&temp_path).await?;
 
@@ -295,13 +295,12 @@ where
                 let metadata = self.file_system.metadata(&entry).await?;
 
                 if metadata.is_directory() {
-                    // Используем Box::pin для рекурсивного вызова
                     let future = Box::pin(self.add_directory_to_tar(tar, base_path, &entry));
                     future.await?;
                 } else {
                     let relative_path = entry
                         .strip_prefix(base_path)
-                        .map_err(|e| UhpmError::FileSystemError(e.to_string()))?;
+                        .map_err(|e| FsError::InvalidPath(e.to_string()))?;
 
                     let content = self.file_system.read_file(&entry).await?;
 

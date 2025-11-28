@@ -1,6 +1,6 @@
 use crate::{
-    Dependency, DependencyKind, Package, PackageReference, Repository, RepositoryIndex, UhpmError,
-    VersionConstraint,
+    Dependency, DependencyKind, FsError, Package, PackageReference, Repository, RepositoryIndex,
+    UhpmError, VersionConstraint,
     factories::PackageFactory,
     paths::UhpmPaths,
     ports::{FileSystemOperations, PackageRepository},
@@ -73,42 +73,6 @@ where
                 features: Vec::new(),
             })
         }
-    }
-
-    async fn add_directory_to_tar(
-        &self,
-        tar: &mut tar::Builder<flate2::write::GzEncoder<&mut Vec<u8>>>,
-        base_path: &PathBuf,
-        current_path: &PathBuf,
-    ) -> Result<(), UhpmError> {
-        if let Ok(entries) = self.file_system.read_dir(current_path).await {
-            for entry in entries {
-                let metadata = self.file_system.metadata(&entry).await?;
-
-                if metadata.is_directory() {
-                    let future = Box::pin(self.add_directory_to_tar(tar, base_path, &entry));
-                    future.await?;
-                } else {
-                    let relative_path = entry
-                        .strip_prefix(base_path)
-                        .map_err(|e| UhpmError::FileSystemError(e.to_string()))?;
-
-                    let content = self.file_system.read_file(&entry).await?;
-
-                    let mut header = tar::Header::new_gnu();
-                    header
-                        .set_path(relative_path)
-                        .map_err(|e| UhpmError::SerializationError(e.to_string()))?;
-                    header.set_size(content.len() as u64);
-                    header.set_cksum();
-
-                    tar.append(&header, &content[..])
-                        .map_err(|e| UhpmError::SerializationError(e.to_string()))?;
-                }
-            }
-        }
-
-        Ok(())
     }
 }
 
